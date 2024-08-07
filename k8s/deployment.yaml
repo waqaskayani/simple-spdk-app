@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spdk
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spdk
+  template:
+    metadata:
+      labels:
+        app: spdk
+    spec:
+      containers:
+      - name: spdk-container
+        image: 002023644847.dkr.ecr.us-west-1.amazonaws.com/simplyblock:v1.0.9-admin
+        securityContext:
+          privileged: true
+        env:
+        - name: NRHUGE
+          value: "512"
+        - name: DRIVER_OVERRIDE
+          value: "vfio-pci"
+        command: ["sh", "-c"] # Override the entrypoigt and arguments
+        args: [./entrypoint.sh $NRHUGE $DRIVER_OVERRIDE 1432]
+        volumeMounts:
+        - name: hugetlbfs
+          mountPath: /mnt/huge
+        - name: modules
+          mountPath: /lib/modules
+        - name: sys
+          mountPath: /sys
+          mountPropagation: Bidirectional
+        resources:
+          requests:
+            memory: 10Mi
+            hugepages-2Mi: 142Mi  # Request for huge pages
+          limits:
+            memory: 784Mi
+            hugepages-2Mi: 142Mi  # Limit for huge pages
+      volumes:
+      - name: hugetlbfs
+        emptyDir:
+          medium: "HugePages"
+      - name: modules
+        hostPath:
+          path: /lib/modules
+      - name: sys
+        hostPath:
+          path: /sys

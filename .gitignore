@@ -1,0 +1,4 @@
+**/plan
+**/.terraform
+**/.terraform.lock*
+**/*.tfstate*

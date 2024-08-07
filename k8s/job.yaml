@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spdk
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: spdk
+        image: busybox
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            FREE_HUGEPAGES=$(grep HugePages_Free /proc/meminfo | awk '{print $2}') && HUGEPAGE_SIZE_KB=$(grep Hugepagesize /proc/meminfo | awk '{print $2}')
+            echo $((FREE_HUGEPAGES * HUGEPAGE_SIZE_KB / 1024))
+      restartPolicy: Never
+  backoffLimit: 4
