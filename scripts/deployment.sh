@@ -16,7 +16,7 @@ yq eval '.spec.template.spec.containers[].args = ["./entrypoint.sh $NRHUGE $DRIV
 
 # Step 4: Deploy the Updated Manifest and wait for it to be available
 kubectl apply -f ../k8s/deployment.yaml
-kubectl wait --for=condition=available --timeout=30s deployment/spdk
+kubectl wait --for=condition=available --timeout=120s deployment/spdk
 
 # Step 5: Retrieve the deployment logs
 POD_NAME=$(kubectl get pods --selector=app=spdk --output=jsonpath='{.items[*].metadata.name}')

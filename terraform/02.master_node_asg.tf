@@ -4,7 +4,7 @@ resource "aws_launch_template" "launch_template_master" {
   instance_type = var.instance_type_master
 
   network_interfaces {
-    associate_public_ip_address = true
+    associate_public_ip_address = var.enable_public_ip
     security_groups             = [aws_security_group.master_asg_sg.id]
   }
 
@@ -23,8 +23,13 @@ resource "aws_launch_template" "launch_template_master" {
   user_data = base64encode(<<-EOF
     #!/bin/bash
 
-    apt update -y && apt install jq -y
+    apt update -y && apt install unzip jq -y
     snap install yq
+
+    # Install AWS CLI for ECR
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    unzip awscliv2.zip
+    ./aws/install
 
     # Install K3s master server
     curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
@@ -33,9 +38,11 @@ resource "aws_launch_template" "launch_template_master" {
     kubectl wait --for=condition=Ready node --all --timeout=60s
     kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels["node-role.kubernetes.io/control-plane"] != null) | .metadata.name' | xargs -I {} kubectl taint nodes {} node-role.kubernetes.io/control-plane=:NoSchedule
 
-    # Read node token and store it in Parameter Store
+    # Read node token and ip and store it in Parameter Store
     NODE_TOKEN=$(cat /var/lib/rancher/k3s/server/node-token)
+    NODE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
     aws ssm put-parameter --name "/k3s/server/node-token" --value "$NODE_TOKEN" --type "SecureString" --overwrite --region ${var.region}
+    aws ssm put-parameter --name "/k3s/server/node-ip" --value "$NODE_IP" --type "SecureString" --overwrite --region ${var.region}
     EOF
   )
 

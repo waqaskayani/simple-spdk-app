@@ -19,4 +19,4 @@ RUN chmod +x entrypoint.sh
 
 # Set the entrypoint to run the SPDK app
 ENTRYPOINT ["./entrypoint.sh"]
-CMD ["128", "vfio-pci", "128MB"]
+CMD ["64", "vfio-pci", "64MB"]

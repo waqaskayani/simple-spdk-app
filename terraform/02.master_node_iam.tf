@@ -29,7 +29,10 @@ resource "aws_iam_role_policy" "master_asg_ssm_role" {
           "ssm:GetParameter",
           "ssm:PutParameter"
         ],
-        "Resource": "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/k3s/server/node-token"
+        "Resource": [
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/k3s/server/node-token",
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/k3s/server/node-ip"
+        ]
       }
     ]
   }

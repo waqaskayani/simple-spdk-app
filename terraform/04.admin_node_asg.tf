@@ -4,7 +4,7 @@ resource "aws_launch_template" "launch_template_admin" {
   instance_type = var.instance_type_admin
 
   network_interfaces {
-    associate_public_ip_address = true
+    associate_public_ip_address = var.enable_public_ip
     security_groups             = [aws_security_group.admin_asg_sg.id]
   }
 
@@ -38,9 +38,26 @@ resource "aws_launch_template" "launch_template_admin" {
     WantedBy=basic.target
     EOT
 
+    cat <<EOT > /etc/systemd/system/hugepages.service
+    [Unit]
+    Description=Allocate Huge Pages
+    DefaultDependencies=no
+    After=local-fs.target
+
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/sbin/sysctl -w vm.nr_hugepages=2048
+
+    [Install]
+    WantedBy=basic.target
+    EOT
+
     systemctl daemon-reload
-    systemctl start enable-thp
-    systemctl enable enable-thp
+    systemctl start enable-thp hugepages
+    systemctl enable enable-thp hugepages
+
+    # Load necessary kernel module
+    modprobe vfio-pci
 
     apt update -y && apt install unzip -y
 
@@ -53,8 +70,6 @@ resource "aws_launch_template" "launch_template_admin" {
     apt install -y docker.io
     usermod -aG docker ssm-user
     newgrp docker
-
-    reboot
     EOF
   )
 

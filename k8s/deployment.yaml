@@ -14,8 +14,8 @@ spec:
         app: spdk
     spec:
       containers:
-      - name: spdk-container
-        image: 002023644847.dkr.ecr.us-west-1.amazonaws.com/simplyblock:v1.0.9-admin
+      - name: spdk
+        image: 002023644847.dkr.ecr.us-west-1.amazonaws.com/simplyblock:v1.1.0-admin
         securityContext:
           privileged: true
         env:

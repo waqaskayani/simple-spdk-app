@@ -4,7 +4,7 @@ resource "aws_launch_template" "launch_template_worker" {
   instance_type = var.instance_type_worker
 
   network_interfaces {
-    associate_public_ip_address = true
+    associate_public_ip_address = var.enable_public_ip
     security_groups             = [aws_security_group.worker_asg_sg.id]
   }
 
@@ -68,7 +68,8 @@ resource "aws_launch_template" "launch_template_worker" {
 
     # Fetch the node token from Parameter Store and join the K3s cluster
     NODE_TOKEN=$(aws ssm get-parameter --name "/k3s/server/node-token" --with-decryption --query "Parameter.Value" --output text --region ${var.region})
-    curl -sfL https://get.k3s.io | K3S_URL=https://${data.aws_instances.asg_master.private_ips[0]}:6443 K3S_TOKEN=$NODE_TOKEN sh -
+    NODE_IP=$(aws ssm get-parameter --name "/k3s/server/node-ip" --with-decryption --query "Parameter.Value" --output text --region ${var.region})
+    curl -sfL https://get.k3s.io | K3S_URL=https://$NODE_IP:6443 K3S_TOKEN=$NODE_TOKEN sh -
 
     # Add ECR repo login for K3s
     ECR_TOKEN=$(aws ecr get-login-password --region ${var.region})

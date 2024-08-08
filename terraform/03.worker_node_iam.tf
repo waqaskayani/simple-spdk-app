@@ -65,7 +65,10 @@ resource "aws_iam_role_policy" "worker_asg_ssm_role" {
         "Action": [
           "ssm:GetParameter"
         ],
-        "Resource": "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/k3s/server/node-token"
+        "Resource": [
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/k3s/server/node-token",
+          "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/k3s/server/node-ip"
+        ]
       }
     ]
   }
