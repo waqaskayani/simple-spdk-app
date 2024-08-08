@@ -1,5 +1,5 @@
 # SPDK - Container app
-This repository contains the codebase for a simple SPDK container application. And includes the necessary Terraform scripts for infrastructure setup and scripts for building/deploying the container. The application is configured for deployment using simple docker and K3s setup.
+This repository contains the codebase for a simple SPDK container application. It includes the necessary Terraform scripts for infrastructure setup and scripts for building/deploying the container. The application is configured for deployment using simple docker and K3s setup.
 
 ## Problem statement
 To create a simple deployment of SPDK container, achieving following objectives:
@@ -7,7 +7,7 @@ To create a simple deployment of SPDK container, achieving following objectives:
 - Make sure that the mem-size (e.g. 1G) is passed into the container to be used when launching the process
 
 ##  Solution
-Following is a detailed explanation of the solution to problem, and steps that were taken to achieve it.
+Following is a detailed explanation of the solution to problem, repository code and steps that were taken to achieve it.
 
 ### Directory structure:
 The repository is structured in following directories:  
@@ -28,7 +28,7 @@ Following pre-requisites must be completed/present on system to execute scripts 
 At a high level, following approach will be used, followed by detailed instructions:  
 - Cloning repository on local
 - Provisioning resources on AWS (3 ASGs: K3s Master, K3s Worker, Admin)
-    - Admin node, to be used for docker build and simple docker deployment
+    - Admin node, to be used for docker build, push to ECR and simple docker deployment
     - K3s Master and Worker to be used for Kubernetes deployment
 - Deployment and testing for Docker
 - Deployment and testing for Kubernetes 
@@ -42,7 +42,7 @@ Below are step by step explaning and detailing the deployment:
     terraform init
     ```
 
-- Inside variables.tf file, update values of required variables. Such as:
+- Inside `variables.tf` file, update values of required variables. Such as:
   - `region`: AWS region to create resources in
   - `vpc_cidr`: CIDR range of VPC created for AWS resources
   - `enable_public_ip`: Enable or disable Public IPs for EC2 instances, default is set to false
@@ -55,12 +55,12 @@ Below are step by step explaning and detailing the deployment:
     ```
 
 - Following is a high-level architecture of how resources would look like:  
-<img src="media/arch_diagram.png" alt="Architecture Diagram" width="600" height="507">
+<img src="media/arch_diagram.png" alt="Architecture Diagram" width="700" height="591">
 
 
 ### 2. Test docker build and deployment
 After terraform resources are created, we will use them and create container image.
-- To build the container image and push it, SSH into `admin` node is recommended.
+- For building the container image and pushing it to ECR repository, SSH into `admin` node is recommended.
 - Use following command to ssh into `admin` node:
     ```bash
     ~$ gossm start 
@@ -84,11 +84,12 @@ After terraform resources are created, we will use them and create container ima
     bash ecr_build.sh
     ```
 - Check ECR repository to verify the latest tag push  
-<img src="media/ecr.png" alt="ECR" width="1200" height="292">
+<img src="media/ecr.png" alt="ECR" width="1000" height="243">  
+
 - Uncomment last 4 lines of the same `ecr_build.sh` script and rerun it. This will use the same image and run container on `admin` node.
-- Execute script:
+- Execute script:  
     ```bash
-    bash ecr_build.sh
+    ~$ bash ecr_build.sh
 
     ........ // logs of script
     baaed71bc83e42fdd64f80e5895a415e1e4d68cd036ab5802ddf20d397d62435               <= docker container ID created
@@ -107,7 +108,7 @@ After terraform resources are created, we will use them and create container ima
     ```
 
 ### 3. Kubernetes deployment
-After simple docker container test on admin node, we will now deploy it onto K3s Kubernetes Cluster, setup on Master and Worker nodes on AWS. All nodes are provisioned with Private IPs only for increased security.
+After docker container test on `admin` node, we will now deploy it onto K3s Kubernetes Cluster, setup on Master and Worker nodes on AWS. All nodes are provisioned with Private IPs only for increased security.  
 Ensure following pre-requisites are working as expected before proceeding:
 #### 3.1 Check Hugepages on worker node
 - SSH into worker node using `gossm start` command
@@ -131,7 +132,7 @@ Ensure following pre-requisites are working as expected before proceeding:
 
     # 3.1.3: Check to ensure ECR repository configuration is present
     ~$ cat /var/lib/rancher/k3s/agent/etc/containerd/config.toml | grep -i "registry.configs"
-    [plugins."io.containerd.grpc.v1.cri".registry.configs."002023644847.dkr.ecr.us-west-1.amazonaws.com".auth]  <= Expected output of ECR configuration
+    [plugins."io.containerd.grpc.v1.cri".registry.configs."001122334455.dkr.ecr.us-west-1.amazonaws.com".auth]  <= Expected output of ECR configuration
     ```
 #### 3.2 Check K3s setup
 - SSH into master node, copy contents of `scripts` and `k8s` directories or clone git repository to get the contents.
@@ -196,16 +197,16 @@ And after deployment, we can find within the output log of the container, the am
 There are several cases where errors can be seen in setting up SPDK container app. Some of them are listed below:
 - For following cases of K8s deployment, ensure memory is allocated accordingly. As when:
     - Memory size more than available hugepage memory is allocated. The container is stuck in `Pending` state:  
-<img src="media/pod-resources-more-than-dpdk-mem.png" alt="ECR" width="700" height="226">
+<img src="media/pod-resources-more-than-dpdk-mem.png" alt="ECR" width="850" height="274">
     - Memory size less than available hugepage memory is allocated. The container errors out:  
-<img src="media/pod-resources-less-than-dpdk-mem.png" alt="ECR" width="700" height="201">
+<img src="media/pod-resources-less-than-dpdk-mem.png" alt="ECR" width="850" height="244">
 
+## Considerations and Future Work
+While the current deployment of the SPDK application demonstrates a robust and functional infrastructure, there are several areas where further enhancements and refinements can be made. Below are some key considerations and potential future work to improve our setup:  
 
-## Future works:
-Currently this deployment is done keeping in consideration certain assumptions. It can be further improved by:  
 **1) SPDK:**  
-- Dynamic updates of resources without using shell script  
-- Attaching unmounted device with worker instance for SPDK container to detect 
+- Dynamic updates of resources (Hugepages/Memory) without using shell script  
+- Attaching unmounted NVMe device with worker instance for SPDK container to detect 
 
 **2) Docker and Kubernetes:**
 - Docker image size can be reduced using Multi-stage docker build
