@@ -49,6 +49,8 @@ resource "aws_launch_template" "launch_template_master" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [ module.vpc ]
 }
 
 resource "aws_autoscaling_group" "asg_master" {
@@ -58,7 +60,7 @@ resource "aws_autoscaling_group" "asg_master" {
   }
 
   name                = "${var.default_name}-master-node-asg"
-  vpc_zone_identifier = module.vpc.public_subnets
+  vpc_zone_identifier = var.enable_public_ip ? module.vpc.public_subnets : module.vpc.private_subnets
   min_size            = 1
   max_size            = 1
   desired_capacity    = 1

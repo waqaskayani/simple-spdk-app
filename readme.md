@@ -169,7 +169,7 @@ After verifying the pre-requisites for K8s deployment, we will now deploy the ap
     ~$ bash deployment.sh 
     job.batch/spdk created
     job.batch/spdk condition met
-    Free hugepage memory: 1428 MB
+    Free hugepage memory: 1430 MB
     deployment.apps/spdk created
     deployment.apps/spdk condition met
 
@@ -196,10 +196,21 @@ And after deployment, we can find within the output log of the container, the am
 ## Troubleshooting:
 There are several cases where errors can be seen in setting up SPDK container app. Some of them are listed below:
 - For following cases of K8s deployment, ensure memory is allocated accordingly. As when:
-    - Memory size more than available hugepage memory is allocated. The container is stuck in `Pending` state:  
-<img src="media/pod-resources-more-than-dpdk-mem.png" alt="ECR" width="850" height="274">
-    - Memory size less than available hugepage memory is allocated. The container errors out:  
-<img src="media/pod-resources-less-than-dpdk-mem.png" alt="ECR" width="850" height="244">
+    - Memory size more than available hugepage memory is allocated. The container is stuck in `Pending` state:  <img src="media/pod-resources-more-than-dpdk-mem.png" alt="ECR" width="850" height="274">  
+
+    - Memory size less than available hugepage memory is allocated. The container errors out:  <img src="media/pod-resources-less-than-dpdk-mem.png" alt="ECR" width="850" height="244">  
+
+- For building docker image on `Admin` node, if you are facing memory issues, provision a node with higher memory such as `t3.medium`.  
+- Another issue was faced, when container image was built on `T3` instance family (running Intel Xeon Platinum processor) and was deployed on Worker node ot `T3a` instance family (running AMD EPYC 7000 series processor). To avoid this, ensure container app is deployed on same processor type which is was built on. Following error was observed:  
+    ```bash
+    ~$ kubectl logs spdk-cbccb6fc5-rqdn9
+    0000:00:04.0 (1d0f 8061): Active devices: mount@nvme0n1:nvme0n1p1, so not binding PCI dev
+    INFO: Requested 512 hugepages but 729 already allocated 
+    ./entrypoint.sh: line 9:    99 Illegal instruction     (core dumped) ./build/bin/nvmf_tgt -s $MEM_SIZE   <= Error noticed
+    Error while connecting to /var/tmp/spdk.sock
+    Is SPDK application running?
+    Error details: Invalid or non-existing address: '/var/tmp/spdk.sock'
+    ```
 
 ## Considerations and Future Work
 While the current deployment of the SPDK application demonstrates a robust and functional infrastructure, there are several areas where further enhancements and refinements can be made. Below are some key considerations and potential future work to improve our setup:  

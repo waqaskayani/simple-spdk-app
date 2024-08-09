@@ -93,6 +93,8 @@ resource "aws_launch_template" "launch_template_worker" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [ module.vpc ]
 }
 
 resource "aws_autoscaling_group" "asg_worker" {
@@ -102,7 +104,7 @@ resource "aws_autoscaling_group" "asg_worker" {
   }
 
   name                = "${var.default_name}-worker-node-asg"
-  vpc_zone_identifier = module.vpc.public_subnets
+  vpc_zone_identifier = var.enable_public_ip ? module.vpc.public_subnets : module.vpc.private_subnets
   min_size            = 1
   max_size            = 1
   desired_capacity    = 1
@@ -116,7 +118,15 @@ resource "aws_autoscaling_group" "asg_worker" {
   health_check_type         = "EC2"
   health_check_grace_period = 180
 
+  depends_on = [ null_resource.wait_for_master_asg ]
+}
+
+resource "null_resource" "wait_for_master_asg" {
   depends_on = [ aws_autoscaling_group.asg_master ]
+
+  provisioner "local-exec" {
+    command = "sleep 30"  # Adjust the delay for Worker instance provisioning as needed
+  }
 }
 
 data "aws_instances" "asg_worker" {

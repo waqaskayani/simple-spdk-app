@@ -24,7 +24,7 @@ variable "launch_template_name_master" {
 variable "instance_type_master" {
   description = "Instance type of master node pool"
   type        = string
-  default     = "t3a.small"  
+  default     = "t3.small"  
 }
 
 variable "launch_template_name_worker" {
@@ -36,7 +36,7 @@ variable "launch_template_name_worker" {
 variable "instance_type_worker" {
   description = "Instance type of worker node pool"
   type        = string
-  default     = "t3a.small"  
+  default     = "t3.small"  
 }
 
 variable "launch_template_name_admin" {
@@ -48,7 +48,7 @@ variable "launch_template_name_admin" {
 variable "instance_type_admin" {
   description = "Instance type of admin node pool"
   type        = string
-  default     = "t3a.small"  
+  default     = "t3.small"  
 }
 
 variable "enable_public_ip" {

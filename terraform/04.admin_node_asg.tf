@@ -23,21 +23,6 @@ resource "aws_launch_template" "launch_template_admin" {
   user_data = base64encode(<<-EOF
     #!/bin/bash
 
-    # Create the systemd service file
-    cat <<EOT > /etc/systemd/system/enable-thp.service
-    [Unit]
-    Description=Enable Transparent Huge Pages
-    DefaultDependencies=no
-    After=sysinit.target local-fs.target
-
-    [Service]
-    Type=oneshot
-    ExecStart=/bin/sh -c 'echo always | tee /sys/kernel/mm/transparent_hugepage/enabled > /dev/null'
-
-    [Install]
-    WantedBy=basic.target
-    EOT
-
     cat <<EOT > /etc/systemd/system/hugepages.service
     [Unit]
     Description=Allocate Huge Pages
@@ -46,15 +31,15 @@ resource "aws_launch_template" "launch_template_admin" {
 
     [Service]
     Type=oneshot
-    ExecStart=/usr/sbin/sysctl -w vm.nr_hugepages=2048
+    ExecStart=/usr/sbin/sysctl -w vm.nr_hugepages=256
 
     [Install]
     WantedBy=basic.target
     EOT
 
     systemctl daemon-reload
-    systemctl start enable-thp hugepages
-    systemctl enable enable-thp hugepages
+    systemctl start hugepages
+    systemctl enable hugepages
 
     # Load necessary kernel module
     modprobe vfio-pci
@@ -68,6 +53,7 @@ resource "aws_launch_template" "launch_template_admin" {
 
     # Install docker
     apt install -y docker.io
+    sleep 3
     usermod -aG docker ssm-user
     newgrp docker
     EOF
@@ -76,6 +62,8 @@ resource "aws_launch_template" "launch_template_admin" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [ module.vpc ]
 }
 
 resource "aws_autoscaling_group" "asg_admin" {
@@ -85,7 +73,7 @@ resource "aws_autoscaling_group" "asg_admin" {
   }
 
   name                = "${var.default_name}-admin-node-asg"
-  vpc_zone_identifier = module.vpc.public_subnets
+  vpc_zone_identifier = var.enable_public_ip ? module.vpc.public_subnets : module.vpc.private_subnets
   min_size            = 1
   max_size            = 1
   desired_capacity    = 1
